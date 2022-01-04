@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Searchbar from './Components/Searchbar';
@@ -6,44 +6,33 @@ import ImageGallery from './Components/ImageGallery';
 import Modal from './Components/Modal';
 import s from './App.module.css';
 
-class App extends Component {
-  state = {
-    request: '',
-    activeImageURL: null,
+export default function App() {
+  const [request, setRequest] = useState();
+  const [activeImageURL, setActiveImageURL] = useState(null);
+
+  const handleFormSubmit = request => {
+    setRequest(request);
   };
 
-  handleFormSubmit = request => {
-    this.setState({ request });
+  const getActiveImageURL = imageURL => {
+    setActiveImageURL(imageURL);
   };
 
-  getActiveImageURL = imageURL => {
-    this.setState({ activeImageURL: imageURL });
+  const toggleModal = () => {
+    setActiveImageURL(null);
   };
 
-  toggleModal = () => {
-    this.setState({ activeImageURL: null });
-  };
+  return (
+    <div className={s.App} style={{ margin: '0 auto', padding: 20 }}>
+      <Searchbar onSubmit={handleFormSubmit} />
+      <ImageGallery request={request} getImageURL={getActiveImageURL} />
+      {activeImageURL && (
+        <Modal onClose={toggleModal} imageURL={activeImageURL}>
+          <img src={activeImageURL} alt={request} />
+        </Modal>
+      )}
 
-  render() {
-    const { activeImageURL, request } = this.state;
-
-    return (
-      <div className={s.App} style={{ margin: '0 auto', padding: 20 }}>
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery
-          request={this.state.request}
-          getImageURL={this.getActiveImageURL}
-        />
-        {activeImageURL && (
-          <Modal onClose={this.toggleModal} imageURL={activeImageURL}>
-            <img src={activeImageURL} alt={request} />
-          </Modal>
-        )}
-
-        <ToastContainer autoClose={3000} />
-      </div>
-    );
-  }
+      <ToastContainer autoClose={3000} />
+    </div>
+  );
 }
-
-export default App;

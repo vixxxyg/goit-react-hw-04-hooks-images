@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import galleryAPI from '../../API/API';
 import ImageGalleryItem from '../ImageGalleryItem';
 import ErrorRequest from '../ErrorRequest';
@@ -14,95 +14,94 @@ const Status = {
   REJECTED: 'rejected',
 };
 
-class ImageGallery extends Component {
-  state = {
-    gallery: null,
-    error: null,
-    status: Status.IDLE,
-    pageNumber: 1,
+export default function ImageGallery({ request, getImageURL }) {
+  const [gallery, setGallery] = useState(null);
+  const [error, setError] = useState(null);
+  const [status, setStatus] = useState(Status.IDLE);
+  const [pageNumber, setPageNumber] = useState(1);
+
+  useEffect(() => {
+    if (!request) {
+      return;
+    }
+
+    setStatus(Status.PENDING);
+
+    galleryAPI
+      .fetchGallery(request, 1)
+      .then(gallery => {
+        setGallery(gallery);
+        setStatus(Status.RESOLVED);
+      })
+      .catch(error => {
+        setError(error);
+        setStatus(Status.REJECTED);
+      });
+  }, [request]);
+
+  useEffect(() => {
+    if (pageNumber !== 1) {
+      galleryAPI
+        .fetchGallery(request, pageNumber)
+        .then(newGallery => {
+          setGallery([...gallery, ...newGallery]);
+          setStatus(Status.RESOLVED);
+        })
+        .catch(error => {
+          setError(error);
+          setStatus(Status.REJECTED);
+        });
+    }
+  }, [pageNumber]);
+
+  const getActiveImageURL = imageURL => {
+    getImageURL(imageURL);
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    const prevRequest = prevProps.request;
-    const nextRequest = this.props.request;
-    const { pageNumber } = this.state;
+  const loadMoreImages = () => {
+    setPageNumber(pageNumber + 1);
+  };
 
-    if (prevRequest !== nextRequest) {
-      this.setState({ status: Status.PENDING, pageNumber: 1 });
-
-      galleryAPI
-        .fetchGallery(nextRequest, 1)
-        .then(gallery => {
-          this.setState({ gallery, status: Status.RESOLVED });
-        })
-        .catch(error => this.setState({ error, status: Status.REJECTED }));
-    }
-
-    if (prevState.pageNumber !== pageNumber && pageNumber !== 1) {
-      galleryAPI
-        .fetchGallery(nextRequest, pageNumber)
-        .then(newGallery => {
-          this.setState(({ gallery }) => ({
-            gallery: [...gallery, ...newGallery],
-            status: Status.RESOLVED,
-          }));
-        })
-        .catch(error => this.setState({ error, status: Status.REJECTED }));
-    }
+  if (status === Status.IDLE) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        Введите Ваш запрос.
+      </div>
+    );
   }
 
-  getActiveImageURL = imageURL => {
-    this.props.getImageURL(imageURL);
-  };
+  if (status === Status.PENDING) {
+    return <Loader />;
+  }
 
-  loadMoreImages = () => {
-    this.setState(({ pageNumber }) => ({ pageNumber: pageNumber + 1 }));
-  };
+  if (status === Status.REJECTED) {
+    return <ErrorRequest message={error.message} />;
+  }
 
-  render() {
-    const { gallery, error, status } = this.state;
+  if (status === Status.RESOLVED) {
+    return (
+      <>
+        <ul className={s.ImageGallery}>
+          {gallery.map(item => (
+            <ImageGalleryItem
+              item={item}
+              key={item.id}
+              onClick={getActiveImageURL}
+            />
+          ))}
+        </ul>
 
-    if (status === 'idle') {
-      return (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          Введите Ваш запрос.
-        </div>
-      );
-    }
-
-    if (status === 'pending') {
-      return <Loader />;
-    }
-
-    if (status === 'rejected') {
-      return <ErrorRequest message={error.message} />;
-    }
-
-    if (status === 'resolved') {
-      return (
-        <>
-          <ul className={s.ImageGallery}>
-            {gallery.map(item => (
-              <ImageGalleryItem
-                item={item}
-                key={item.id}
-                onClick={this.getActiveImageURL}
-              />
-            ))}
-          </ul>
-
-          <Button
-            onClick={this.loadMoreImages}
-            aria-label="Загрузить больше картинок"
-          />
-        </>
-      );
-    }
+        <Button
+          onClick={loadMoreImages}
+          aria-label="Загрузить больше картинок"
+        />
+      </>
+    );
   }
 }
 
@@ -110,5 +109,3 @@ ImageGallery.propTypes = {
   request: PropTypes.string.isRequired,
   getImageURL: PropTypes.func.isRequired,
 };
-
-export default ImageGallery;
