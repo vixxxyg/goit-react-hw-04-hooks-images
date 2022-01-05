@@ -106,6 +106,6 @@ export default function ImageGallery({ request, getImageURL }) {
 }
 
 ImageGallery.propTypes = {
-  request: PropTypes.string.isRequired,
+  request: PropTypes.string,
   getImageURL: PropTypes.func.isRequired,
 };
